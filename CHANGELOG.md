@@ -2,6 +2,8 @@
 
 ## Latest changes
 
+- **Sound alerts** is beside **Pause clock** or **Resume clock**. It remains
+  available at halftime.
 - Use **What changed** in the update banner to read these notes on GitHub.
   The app and the current game stay open.
 

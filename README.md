@@ -80,7 +80,8 @@ substitution, including after reload.
 Blue position-change labels stay until the next lineup change, including after
 reload. Unchanged blocks do not clear them.
 
-**Sound alerts** is an on/off control. When on, it has a dark background.
+**Sound alerts** is beside **Pause clock** or **Resume clock**. It remains
+available at halftime. When on, it has a dark background.
 Alerts use a five-second pulsing alarm and vibration where the browser supports
 it. Acknowledge the change or turn sound off to stop the current alarm.
 

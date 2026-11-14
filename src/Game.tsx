@@ -475,15 +475,38 @@ export function Game({
             {formatTime(run.clock.elapsed)}
           </strong>
         </p>
-        {!recovered &&
-          (run.clock.phase === 'first' || run.clock.phase === 'second') && (
+        {!recovered && run.clock.phase !== 'fulltime' && (
+          <div
+            className="clock-controls"
+            role="group"
+            aria-label="Game controls"
+          >
+            {(run.clock.phase === 'first' || run.clock.phase === 'second') && (
+              <button
+                className={run.clock.anchor === null ? '' : 'secondary'}
+                onClick={pause}
+              >
+                {run.clock.anchor === null ? 'Resume clock' : 'Pause clock'}
+              </button>
+            )}
             <button
-              className={run.clock.anchor === null ? '' : 'secondary'}
-              onClick={pause}
+              className={soundOn ? 'sound-enabled' : 'secondary'}
+              aria-pressed={soundOn}
+              onClick={() =>
+                attempt(() => {
+                  void (soundOn ? disableSound() : enableSound()).catch(
+                    (error: unknown) =>
+                      attempt(() => {
+                        throw error;
+                      }),
+                  );
+                })
+              }
             >
-              {run.clock.anchor === null ? 'Resume clock' : 'Pause clock'}
+              Sound alerts {soundOn ? 'on' : 'off'}
             </button>
-          )}
+          </div>
+        )}
       </div>
       {recovered ? (
         <div className="card warning-panel">
@@ -756,24 +779,6 @@ export function Game({
       )}
       {!recovered && run.clock.phase !== 'fulltime' && (
         <>
-          <div className="row wrap">
-            <button
-              className={soundOn ? 'sound-enabled' : 'secondary'}
-              aria-pressed={soundOn}
-              onClick={() =>
-                attempt(() => {
-                  void (soundOn ? disableSound() : enableSound()).catch(
-                    (error: unknown) =>
-                      attempt(() => {
-                        throw error;
-                      }),
-                  );
-                })
-              }
-            >
-              Sound alerts {soundOn ? 'on' : 'off'}
-            </button>
-          </div>
           <p className="hint">
             Sound alerts last five seconds. Vibration is used when supported.
             Keep the app open; background alerts are not supported.
