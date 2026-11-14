@@ -36,7 +36,8 @@ textarea,
 summary {
   -webkit-tap-highlight-color: transparent;
 }
-button {
+button,
+.button-link {
   border: 1px solid transparent;
   border-radius: 12px;
   background: var(--green);
@@ -47,8 +48,15 @@ button {
   cursor: pointer;
   line-height: 1.35;
 }
-button:hover {
+button:hover,
+.button-link:hover {
   filter: brightness(0.94);
+}
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 button:disabled {
   opacity: 0.45;
