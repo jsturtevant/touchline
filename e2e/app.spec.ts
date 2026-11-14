@@ -1143,6 +1143,35 @@ test('pulses the alarm for five seconds, shows sound state and cancels on acknow
   );
 });
 
+test('stops the alarm without replaying it when changes are acknowledged at halftime', async ({
+  page,
+}) => {
+  await mockAlerts(page);
+  await page.clock.install({ time: new Date('2026-11-14T12:00:00Z') });
+  await seed(page, true);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Resume saved game' }).click();
+  await page.getByRole('button', { name: 'Resume clock' }).click();
+  await page.clock.runFor(65_000);
+  await expect(
+    page.getByRole('heading', { name: 'Halftime', exact: true }),
+  ).toBeVisible();
+  const starts = () =>
+    page.evaluate(
+      () =>
+        JSON.parse(localStorage.getItem('test.alert.starts') ?? '[]').length,
+    );
+  const before = await starts();
+  expect(before).toBeGreaterThan(0);
+  await page.getByRole('button', { name: 'Acknowledge changes' }).click();
+  expect(await starts()).toBe(before);
+  expect(
+    await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('test.alert.vibrations') ?? '[]').at(-1),
+    ),
+  ).toBe(0);
+});
+
 test('keeps sound alerts working without browser vibration support', async ({
   page,
 }) => {
