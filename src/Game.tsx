@@ -185,6 +185,10 @@ export function useGameAlerts(
   attempt: (action: () => void) => void,
 ) {
   const lastAlert = useRef('');
+  const previousChanges = useRef('');
+  const hasChanges =
+    !!run && (run.notice !== null || run.pendingBlock !== null);
+  const phaseKey = run ? `${run.id}:${run.clock.phase}` : '';
   const shouldAlert =
     !!run &&
     !recovered &&
@@ -196,14 +200,17 @@ export function useGameAlerts(
     ? `${run.id}:${run.pendingBlock}:${run.appliedBlock}:${run.notice?.missed}:${run.clock.phase}`
     : '';
   useEffect(() => {
+    const acknowledged = previousChanges.current === phaseKey && !hasChanges;
+    previousChanges.current = hasChanges ? phaseKey : '';
     if (!shouldAlert) {
       stopAlarm();
       return;
     }
     if (lastAlert.current === alertKey) return;
     lastAlert.current = alertKey;
-    attempt(alarm);
-  }, [alertKey, attempt, shouldAlert]);
+    if (acknowledged) stopAlarm();
+    else attempt(alarm);
+  }, [alertKey, attempt, hasChanges, phaseKey, shouldAlert]);
 }
 
 export function ResultForm({
