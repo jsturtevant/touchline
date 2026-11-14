@@ -11,6 +11,7 @@ import {
   estimatedSeconds,
   nextSubstitutionIndex,
   recentArrivals,
+  recentPositionMoves,
   substitutionLineup,
   substitutions,
 } from './engine';
@@ -640,6 +641,7 @@ export function Game({
         players={run.players}
         label="Live lineup"
         recentlyOn={recentArrivals(run)}
+        recentlyMoved={recentPositionMoves(run)}
         nextLineup={
           !recovered && run.clock.phase !== 'fulltime'
             ? nextBlock?.lineup

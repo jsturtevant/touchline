@@ -11,6 +11,7 @@ type Props = {
   players: Player[];
   nextLineup?: string[];
   recentlyOn?: string[];
+  recentlyMoved?: string[];
   progress?: PlanningProgress;
   label?: string;
   onChange?: (slot: number, player: string) => void;
@@ -46,6 +47,7 @@ export function Field({
   players,
   nextLineup,
   recentlyOn = [],
+  recentlyMoved = [],
   progress,
   label = 'Soccer field',
   onChange,
@@ -73,14 +75,16 @@ export function Field({
               incomingId !== lineup[slot]
                 ? players.find((item) => item.id === incomingId)
                 : undefined;
-            const justOn = recentlyOn.includes(lineup[slot]);
+            const moved = recentlyMoved.includes(lineup[slot]);
+            const justOn = !moved && recentlyOn.includes(lineup[slot]);
+            const movingHere = incoming && lineup.includes(incoming.id);
             return (
               <div className="pitch-player" key={slot}>
                 <span className="shirt" aria-hidden="true">
                   {player?.number || (slot === 0 ? 'G' : '•')}
                 </span>
                 <span
-                  className={`player-name${onChange ? ' editable-name' : ''}${justOn ? ' recently-on' : ''}`}
+                  className={`player-name${onChange ? ' editable-name' : ''}${justOn ? ' recently-on' : ''}${moved ? ' position-move' : ''}`}
                 >
                   {onChange ? (
                     <select
@@ -104,16 +108,24 @@ export function Field({
                     <span>{player?.name ?? 'Unassigned'}</span>
                   )}
                   {justOn && <span className="recent-label">Just on</span>}
+                  {moved && (
+                    <span className="recent-label">Position changed</span>
+                  )}
                 </span>
                 {progress && player && (
                   <PlayerTime player={player.id} progress={progress} />
                 )}
                 {incoming && (
                   <span className="incoming-preview">
-                    <span className="incoming-player">
+                    <span
+                      className={`incoming-player${movingHere ? ' position-move' : ''}`}
+                    >
                       <span className="incoming-label">Next</span>{' '}
                       {incoming.name}
                     </span>
+                    {movingHere && (
+                      <span className="move-label">Moves here</span>
+                    )}
                     {progress && (
                       <PlayerTime player={incoming.id} progress={progress} />
                     )}

@@ -273,6 +273,7 @@ for (const mode of ['saved plan', 'game setup', 'live game']) {
   test(`shows the next goalkeeper and field occupant for a position-only change in ${mode}`, async ({
     page,
   }) => {
+    await page.clock.install({ time: new Date('2026-11-14T12:00:00Z') });
     const lineup = template.blocks[0].lineup;
     const positionPlan: Template = {
       ...template,
@@ -310,10 +311,38 @@ for (const mode of ['saved plan', 'game setup', 'live game']) {
     await expect(
       field.locator('.pitch-row').last().locator('.incoming-player'),
     ).toHaveText('Next Blair');
-    if (mode === 'live game')
+    await expect(field.locator('.incoming-player.position-move')).toHaveCount(
+      2,
+    );
+    await expect(field.getByText('Moves here', { exact: true })).toHaveCount(2);
+    await expect(field.locator('.player-name.position-move')).toHaveCount(0);
+    if (mode === 'live game') {
       await expect(page.locator('.next-change')).toContainText(
         'No bench changes',
       );
+      await page.getByRole('button', { name: 'Resume clock' }).click();
+      await page.clock.runFor(35_000);
+    } else {
+      await page
+        .getByRole('group', { name: 'Lineup blocks', exact: true })
+        .getByRole('button')
+        .nth(1)
+        .click();
+    }
+    await expect(field.locator('.player-name.position-move')).toHaveCount(2);
+    await expect(
+      field.getByText('Position changed', { exact: true }),
+    ).toHaveCount(2);
+    await expect(field.locator('.player-name.recently-on')).toHaveCount(0);
+    await expect(field.locator('.player-name.position-move').first()).toHaveCSS(
+      'background-color',
+      'rgb(228, 237, 255)',
+    );
+    if (mode === 'live game') {
+      await page.reload();
+      await page.getByRole('button', { name: 'Resume saved game' }).click();
+      await expect(field.locator('.player-name.position-move')).toHaveCount(2);
+    }
   });
 }
 

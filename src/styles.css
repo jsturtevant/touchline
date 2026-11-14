@@ -753,10 +753,23 @@ legend {
   background: #dcefdc;
   color: #24522d;
 }
+.player-name.position-move,
+.incoming-player.position-move,
+.move-label {
+  background: #e4edff;
+  color: #183c69;
+}
+.move-label {
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 0.6rem;
+  font-weight: 800;
+}
 .editable-name {
   padding: 0;
 }
-.editable-name.recently-on select {
+.editable-name.recently-on select,
+.editable-name.position-move select {
   background: transparent;
   color: inherit;
 }
