@@ -143,8 +143,12 @@ Add to Home Screen. Other supported browsers show an Install app option.
 When the browser offers installation, **Your data → Install for the touchline**
 shows an **Install app** button. Browsers without this prompt still use their own
 installation menus.
+
 If you installed the app at the old `/soccersub/` URL, export a backup before
 reinstalling from the new URL.
+
+When an app update is ready, **What changed** opens the latest release notes in
+`CHANGELOG.md` on GitHub. It needs internet access and does not reload the app.
 
 Manual in-app updates are blocked while a game is active. Browsers may activate
 an update after all app tabs close; the saved game remains available on reopening.

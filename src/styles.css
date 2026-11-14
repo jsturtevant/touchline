@@ -1085,7 +1085,8 @@ footer {
   border-top: 0;
   border-bottom: 1px solid #e7c4bc;
 }
-.update-banner button.secondary {
+.update-banner button.secondary,
+.update-banner .button-link {
   background: #f6ded9;
   border-color: #e2bbb0;
   color: #873c2d;
