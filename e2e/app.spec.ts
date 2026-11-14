@@ -129,6 +129,70 @@ async function seed(
   }, state);
 }
 
+async function mockAlerts(page: Page, vibration = true, resumeFails = false) {
+  await page.addInitScript(
+    ({ vibration, resumeFails }) => {
+      const record = (key: string, value: number | number[]) => {
+        const values = JSON.parse(localStorage.getItem(key) ?? '[]');
+        values.push(value);
+        localStorage.setItem(key, JSON.stringify(values));
+      };
+      class TestAudioContext extends EventTarget {
+        state = 'suspended';
+        currentTime = 10;
+        destination = {};
+        async resume() {
+          if (resumeFails) throw new Error('Audio could not start.');
+          this.state = 'running';
+          this.dispatchEvent(new Event('statechange'));
+        }
+        async suspend() {
+          this.state = 'suspended';
+          this.dispatchEvent(new Event('statechange'));
+        }
+        createOscillator() {
+          return {
+            frequency: {
+              setValueAtTime: (value: number) =>
+                record('test.alert.frequencies', value),
+            },
+            connect: () => undefined,
+            disconnect: () => undefined,
+            start: (at = this.currentTime) => record('test.alert.starts', at),
+            stop: (at = this.currentTime) => record('test.alert.stops', at),
+          };
+        }
+        createGain() {
+          return {
+            gain: {
+              setValueAtTime: () => undefined,
+              exponentialRampToValueAtTime: () => undefined,
+            },
+            connect: () => undefined,
+            disconnect: () => undefined,
+          };
+        }
+      }
+      Object.defineProperty(window, 'AudioContext', {
+        value: TestAudioContext,
+      });
+      Object.defineProperty(navigator, 'vibrate', {
+        configurable: true,
+        value: vibration
+          ? (pattern: number | number[]) => {
+              record('test.alert.vibrations', pattern);
+              return (
+                pattern === 0 ||
+                localStorage.getItem('test.vibration-blocked') !== 'yes'
+              );
+            }
+          : undefined,
+      });
+    },
+    { vibration, resumeFails },
+  );
+}
+
 async function selectBenchKeeper(page: Page) {
   const select = page.getByLabel('Player in field slot 1 (goalkeeper)', {
     exact: true,
@@ -1008,6 +1072,106 @@ test('keeps unresolved substitutions visible at halftime', async ({ page }) => {
   await expect(
     page.getByRole('button', { name: 'Start second half', exact: true }),
   ).toBeDisabled();
+});
+
+test('pulses the alarm for five seconds, shows sound state and cancels on acknowledgement', async ({
+  page,
+}) => {
+  await mockAlerts(page);
+  await page.clock.install({ time: new Date('2026-11-14T12:00:00Z') });
+  await seed(page, true);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Resume saved game' }).click();
+  const sound = page.getByRole('button', { name: /^Sound alerts/ });
+  await expect(sound).toHaveAttribute('aria-pressed', 'true');
+  await expect(sound).toHaveCSS('background-color', 'rgb(18, 60, 47)');
+  await sound.click();
+  await expect(sound).toHaveAttribute('aria-pressed', 'false');
+  await sound.click();
+  await expect(sound).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Resume clock' }).click();
+  await page.clock.runFor(35_000);
+  const events = await page.evaluate(() => ({
+    starts: JSON.parse(localStorage.getItem('test.alert.starts') ?? '[]'),
+    stops: JSON.parse(localStorage.getItem('test.alert.stops') ?? '[]'),
+    frequencies: JSON.parse(
+      localStorage.getItem('test.alert.frequencies') ?? '[]',
+    ),
+    vibrations: JSON.parse(
+      localStorage.getItem('test.alert.vibrations') ?? '[]',
+    ).filter(Array.isArray),
+  }));
+  expect(events.starts).toHaveLength(1);
+  expect(events.stops[0] - events.starts[0]).toBe(5);
+  expect(events.frequencies).toEqual(
+    Array.from({ length: 10 }, (_, i) => (i % 2 === 0 ? 740 : 980)),
+  );
+  expect(events.vibrations).toHaveLength(1);
+  expect(
+    events.vibrations[0].reduce((sum: number, value: number) => sum + value, 0),
+  ).toBe(4850);
+  await page.clock.runFor(2_000);
+  expect(
+    await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('test.alert.starts') ?? '[]'),
+    ),
+  ).toHaveLength(1);
+  await page.getByRole('button', { name: 'Acknowledge changes' }).click();
+  expect(
+    await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('test.alert.stops') ?? '[]'),
+    ),
+  ).toEqual([15, 10]);
+  expect(
+    await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('test.alert.vibrations') ?? '[]').at(-1),
+    ),
+  ).toBe(0);
+  await sound.click();
+  await expect(sound).toHaveAttribute('aria-pressed', 'false');
+  await page.evaluate(() =>
+    localStorage.setItem('test.vibration-blocked', 'yes'),
+  );
+  await page.clock.runFor(30_000);
+  expect(
+    await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('test.alert.starts') ?? '[]'),
+    ),
+  ).toHaveLength(1);
+  await expect(page.getByRole('alert')).toContainText(
+    'Vibration was blocked by this browser.',
+  );
+});
+
+test('keeps sound alerts working without browser vibration support', async ({
+  page,
+}) => {
+  await mockAlerts(page, false);
+  await page.clock.install({ time: new Date('2026-11-14T12:00:00Z') });
+  await seed(page, true);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Resume saved game' }).click();
+  await page.getByRole('button', { name: 'Resume clock' }).click();
+  await page.clock.runFor(35_000);
+  expect(
+    await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('test.alert.starts') ?? '[]'),
+    ),
+  ).toHaveLength(1);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('keeps the sound toggle off and reports an audio activation failure', async ({
+  page,
+}) => {
+  await mockAlerts(page, false, true);
+  await seed(page, true);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Resume saved game' }).click();
+  await expect(
+    page.getByRole('button', { name: /^Sound alerts/ }),
+  ).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByRole('alert')).toContainText('Audio could not start.');
 });
 
 test('sounds alerts while the coach is viewing history', async ({ page }) => {

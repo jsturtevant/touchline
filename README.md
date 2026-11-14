@@ -77,6 +77,10 @@ of that half. The preview skips unchanged blocks to show the next real changes.
 Players who just came on have a soft-green **Just on** badge until the next
 substitution, including after reload.
 
+**Sound alerts** is an on/off control. When on, it has a dark background.
+Alerts use a five-second pulsing alarm and vibration where the browser supports
+it. Acknowledge the change or turn sound off to stop the current alarm.
+
 **Estimated playing time** shows expected totals at full time from actual play
 and the remaining lineups. It updates after plan edits and assumes pending
 changes happen now. **Playing time so far** remains the actual recorded time.
