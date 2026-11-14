@@ -23,6 +23,9 @@ test('PWA offers installation only for an available browser prompt', async ({
   page,
 }) => {
   await page.goto('./');
+  await expect(page.getByRole('link', { name: /^What changed/ })).toHaveCount(
+    0,
+  );
   expect(await offerInstall(page)).toBe(true);
   await expect(
     page.getByRole('button', { name: 'Install app', exact: true }),
@@ -153,12 +156,48 @@ test('PWA blocks manual updates during a game and preserves it when the browser 
   await page.getByRole('button', { name: 'Your data', exact: true }).click();
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await expect(banner).toBeInViewport();
+  const notes = banner.getByRole('link', { name: /^What changed/ });
+  await expect(notes).toHaveAttribute(
+    'href',
+    'https://github.com/jsturtevant/touchline/blob/main/CHANGELOG.md',
+  );
+  await context.route(
+    'https://github.com/jsturtevant/touchline/blob/main/CHANGELOG.md',
+    (route) =>
+      route.fulfill({
+        contentType: 'text/html',
+        body: '<title>Touchline changes</title>',
+      }),
+  );
+  const [releaseNotes] = await Promise.all([
+    page.waitForEvent('popup'),
+    notes.click(),
+  ]);
+  await releaseNotes.waitForURL(
+    'https://github.com/jsturtevant/touchline/blob/main/CHANGELOG.md',
+  );
+  expect(await releaseNotes.evaluate(() => window.opener === null)).toBe(true);
+  await releaseNotes.close();
+  await expect(
+    page.getByRole('button', { name: 'Update app', exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      async () => !!(await navigator.serviceWorker.ready).waiting,
+    ),
+  ).toBe(true);
+  expect(
+    await page.evaluate(
+      () => JSON.parse(localStorage.getItem('soccersub.v1')!).active,
+    ),
+  ).toEqual(state.active);
   await page.getByRole('button', { name: 'Update app', exact: true }).click();
   await expect(
     page.getByText('End or discard the active game before updating.', {
       exact: true,
     }),
   ).toBeVisible();
+  await expect(notes).toBeVisible();
   expect(
     await page.evaluate(
       () => JSON.parse(localStorage.getItem('soccersub.v1')!).active,

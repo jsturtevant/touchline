@@ -1106,12 +1106,18 @@ test('keeps unresolved substitutions visible at halftime', async ({ page }) => {
 test('pulses the alarm for five seconds, shows sound state and cancels on acknowledgement', async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 320, height: 812 });
   await mockAlerts(page);
   await page.clock.install({ time: new Date('2026-11-14T12:00:00Z') });
   await seed(page, true);
   await page.goto('/');
   await page.getByRole('button', { name: 'Resume saved game' }).click();
-  const sound = page.getByRole('button', { name: /^Sound alerts/ });
+  const controls = page.getByRole('group', {
+    name: 'Game controls',
+    exact: true,
+  });
+  const sound = controls.getByRole('button', { name: /^Sound alerts/ });
+  await expect(controls.getByRole('button')).toHaveCount(2);
   await expect(sound).toHaveAttribute('aria-pressed', 'true');
   await expect(sound).toHaveCSS('background-color', 'rgb(18, 60, 47)');
   await sound.click();
@@ -1119,6 +1125,17 @@ test('pulses the alarm for five seconds, shows sound state and cancels on acknow
   await sound.click();
   await expect(sound).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Resume clock' }).click();
+  const pauseBox = await controls
+    .getByRole('button', { name: 'Pause clock' })
+    .boundingBox();
+  const soundBox = await sound.boundingBox();
+  if (!pauseBox || !soundBox)
+    throw new Error('Clock controls are not visible.');
+  expect(Math.abs(pauseBox.y - soundBox.y)).toBeLessThan(1);
+  expect(pauseBox.x + pauseBox.width).toBeLessThanOrEqual(soundBox.x);
+  expect(soundBox.x + soundBox.width).toBeLessThanOrEqual(320);
+  expect(pauseBox.height).toBeGreaterThanOrEqual(44);
+  expect(soundBox.height).toBeGreaterThanOrEqual(44);
   await page.clock.runFor(35_000);
   const events = await page.evaluate(() => ({
     starts: JSON.parse(localStorage.getItem('test.alert.starts') ?? '[]'),
@@ -1162,6 +1179,8 @@ test('pulses the alarm for five seconds, shows sound state and cancels on acknow
     localStorage.setItem('test.vibration-blocked', 'yes'),
   );
   await page.clock.runFor(30_000);
+  await expect(controls.getByRole('button')).toHaveCount(1);
+  await expect(sound).toBeVisible();
   expect(
     await page.evaluate(() =>
       JSON.parse(localStorage.getItem('test.alert.starts') ?? '[]'),

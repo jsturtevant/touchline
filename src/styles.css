@@ -934,6 +934,21 @@ details summary {
   font-variant-numeric: tabular-nums;
   color: #214f34;
 }
+.clock-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+.clock-controls button {
+  min-width: 0;
+  padding: 12px 8px;
+}
+.clock-controls button:only-child {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
 .clock-card p {
   color: var(--muted);
   margin: 12px 0 18px;
@@ -1085,7 +1100,8 @@ footer {
   border-top: 0;
   border-bottom: 1px solid #e7c4bc;
 }
-.update-banner button.secondary {
+.update-banner button.secondary,
+.update-banner .button-link {
   background: #f6ded9;
   border-color: #e2bbb0;
   color: #873c2d;

@@ -96,6 +96,17 @@ export function Pwa() {
           </button>
         </>
       ) : null}
+      {needRefresh && (
+        <a
+          className="button-link"
+          href="https://github.com/jsturtevant/touchline/blob/main/CHANGELOG.md"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="What changed (opens latest release notes on GitHub in a new tab)"
+        >
+          What changed
+        </a>
+      )}
       {error && (
         <button className="text-button" onClick={() => setError('')}>
           Dismiss
