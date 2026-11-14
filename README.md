@@ -90,9 +90,14 @@ changes happen now. **Playing time so far** remains the actual recorded time.
 
 ## Your data
 
-All data stays in this browser. There is no account, server, analytics, or sync.
+Saved app data stays in this browser. The app has no account, server, analytics,
+or sync.
 **Export a backup from Your data regularly:** clearing browser data removes teams,
 plans, and history. Backups do not include an unfinished game.
+
+Under **About Touchline**, the optional **Give positive feedback** action opens a
+public GitHub issue with a title and prompt. It requires internet access and a
+GitHub account. No saved team or game data is included.
 
 The app saves one unfinished game locally. On reopening, choose resume or discard.
 Its clock keeps running while the app is closed, but stops at halftime and full

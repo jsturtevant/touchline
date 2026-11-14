@@ -640,6 +640,26 @@ function Settings({
             View source code on GitHub
           </a>
         </p>
+        <p>
+          <a
+            className="button-link"
+            aria-describedby="positive-feedback-hint"
+            href={`https://github.com/jsturtevant/touchline/issues/new?${new URLSearchParams(
+              {
+                title: 'Positive feedback for Touchline',
+                body: 'What do you like about Touchline?\n\n',
+              },
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Give positive feedback
+          </a>
+        </p>
+        <p className="hint" id="positive-feedback-hint">
+          Opens a public GitHub issue in a new tab. Internet access and a GitHub
+          account are required. No saved team or game data is included.
+        </p>
       </div>
       {state.teams.some((team) => team.archived) && (
         <div className="card">

@@ -1394,9 +1394,18 @@ test('stops at halftime after background time, resumes manually, and saves resul
   expect(data.history[0].run.clock.elapsed).toBe(120);
 });
 
-test('links to the public source code from About Touchline', async ({
+test('links to source code and opens positive feedback from About Touchline without sharing saved data', async ({
   page,
 }) => {
+  await seed(page);
+  await page
+    .context()
+    .route('https://github.com/jsturtevant/touchline/issues/new?**', (route) =>
+      route.fulfill({
+        body: '<title>GitHub feedback</title>',
+        contentType: 'text/html',
+      }),
+    );
   await page.goto('/');
   await page.getByRole('button', { name: 'Your data', exact: true }).click();
   const about = page.locator('.card').filter({
@@ -1405,6 +1414,39 @@ test('links to the public source code from About Touchline', async ({
   await expect(
     about.getByRole('link', { name: 'View source code on GitHub' }),
   ).toHaveAttribute('href', 'https://github.com/jsturtevant/touchline');
+  const action = about.getByRole('link', {
+    name: 'Give positive feedback',
+    exact: true,
+  });
+  await expect(action).toHaveAttribute('target', '_blank');
+  await expect(action).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(action).toHaveAccessibleDescription(
+    /Opens a public GitHub issue in a new tab/,
+  );
+  const saved = await page.evaluate(() => localStorage.getItem('soccersub.v1'));
+  const [feedback] = await Promise.all([
+    page.waitForEvent('popup'),
+    action.click(),
+  ]);
+  await feedback.waitForURL(
+    'https://github.com/jsturtevant/touchline/issues/new?**',
+  );
+  await feedback.waitForLoadState();
+  const destination = new URL(feedback.url());
+  expect(destination.origin).toBe('https://github.com');
+  expect(destination.pathname).toBe('/jsturtevant/touchline/issues/new');
+  expect([...destination.searchParams.keys()]).toEqual(['title', 'body']);
+  expect(destination.searchParams.get('title')).toBe(
+    'Positive feedback for Touchline',
+  );
+  expect(destination.searchParams.get('body')).toBe(
+    'What do you like about Touchline?\n\n',
+  );
+  expect(await feedback.evaluate(() => window.opener === null)).toBe(true);
+  expect(await page.evaluate(() => localStorage.getItem('soccersub.v1'))).toBe(
+    saved,
+  );
+  await feedback.close();
 });
 
 test('rejects bad imports without replacing data and requires preview confirmation', async ({
