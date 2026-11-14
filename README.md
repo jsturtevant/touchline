@@ -59,10 +59,11 @@ Game setup uses the saved formation, game length, strategy and schedule.
 Change these settings in the plan editor, not in game setup.
 
 In the block editor, green **Just on** labels mark arrivals from the previous
-block. Yellow **Next** labels show the next player in each changed position,
-including players who move on the field. OFF-to-ON rows still show bench
-substitutions only. These markers update as you edit a saved plan or prepare
-a game.
+block. **Next** labels show the next player in each changed position: yellow
+for bench arrivals, or blue **Moves here** for players already on the field.
+Blue **Position changed** labels mark completed position moves. OFF-to-ON rows
+still show bench substitutions only. These markers update as you edit a saved
+plan or prepare a game.
 
 While planning, **Played** beside field, next-player and bench names shows
 playing time up to the selected block's start. A red dot marks more than
@@ -76,6 +77,12 @@ The live lineup changes only when applied. Goalkeeper edits carry through the re
 of that half. The preview skips unchanged blocks to show the next real changes.
 Players who just came on have a soft-green **Just on** badge until the next
 substitution, including after reload.
+Blue position-change labels stay until the next lineup change, including after
+reload. Unchanged blocks do not clear them.
+
+**Sound alerts** is an on/off control. When on, it has a dark background.
+Alerts use a five-second pulsing alarm and vibration where the browser supports
+it. Acknowledge the change or turn sound off to stop the current alarm.
 
 **Estimated playing time** shows expected totals at full time from actual play
 and the remaining lineups. It updates after plan edits and assumes pending

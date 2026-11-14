@@ -46,6 +46,22 @@ export function changes(from: string[], to: string[]) {
   };
 }
 
+export function positionMoves(from: string[], to: string[]): string[] {
+  return to.filter(
+    (id, slot) => from.includes(id) && from.indexOf(id) !== slot,
+  );
+}
+
+export function recentPositionMoves(run: Run): string[] {
+  for (let index = run.events.length - 1; index > 0; index--) {
+    const from = run.events[index - 1].lineup;
+    const to = run.events[index].lineup;
+    if (to.some((id, slot) => from[slot] !== id))
+      return positionMoves(from, to);
+  }
+  return [];
+}
+
 export function nextBlockIndex(run: Run): number {
   if (run.clock.phase === 'fulltime') return -1;
   if (run.pendingBlock !== null) return run.pendingBlock;

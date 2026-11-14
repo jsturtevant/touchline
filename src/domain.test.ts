@@ -24,6 +24,8 @@ import {
   estimatedSeconds,
   nextBlockIndex,
   nextSubstitutionIndex,
+  positionMoves,
+  recentPositionMoves,
   startSecondHalf,
   substitutions,
   substitutionLineup,
@@ -498,6 +500,31 @@ describe('lineup planning', () => {
 });
 
 describe('game clock and actual lineups', () => {
+  it('distinguishes retained-player position moves from bench arrivals', () => {
+    expect(positionMoves(['a', 'b', 'c'], ['b', 'd', 'a'])).toEqual(['b', 'a']);
+    expect(positionMoves(['a', 'b', 'c'], ['a', 'd', 'c'])).toEqual([]);
+  });
+
+  it('keeps recent position moves through held lineups and clears them at the next actual change', () => {
+    const game = run();
+    expect(recentPositionMoves(game)).toEqual([]);
+    const opening = [...game.lineup];
+    const moved = [opening[1], opening[0], ...opening.slice(2)];
+    game.lineup = [...moved];
+    game.events.push(
+      { at: 100, lineup: [...moved], source: 'coach' },
+      { at: 200, lineup: [...moved], source: 'planned' },
+    );
+    expect(recentPositionMoves(game)).toEqual([opening[1], opening[0]]);
+    game.lineup[2] = 'player-9';
+    game.events.push({
+      at: 300,
+      lineup: [...game.lineup],
+      source: 'coach',
+    });
+    expect(recentPositionMoves(game)).toEqual([]);
+  });
+
   it('preserves later manual assignments when correcting the live goalkeeper', () => {
     const start = players.slice(0, 9).map((player) => player.id);
     let plan: Template = {

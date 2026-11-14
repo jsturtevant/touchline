@@ -15,7 +15,7 @@ import {
   type Team,
 } from './domain';
 import { Field, PlayerTime, swapPlayer } from './Field';
-import { changes } from './engine';
+import { changes, positionMoves } from './engine';
 import { rotationStrategies } from './rotations';
 import {
   initialPlanSettings,
@@ -99,8 +99,9 @@ export function LineupEditor({
           : 'A goalkeeper edit lasts for the rest of that half.'}
       </p>
       <p className="hint">
-        Green marks players who came on from the previous block. Yellow shows
-        the next player in each changed position.
+        Green marks players who came on from the previous block. Blue marks
+        position changes. Next labels show the next player in each changed
+        position.
       </p>
       {showStrategyInfo && (
         <p className="hint">
@@ -145,6 +146,11 @@ export function LineupEditor({
         recentlyOn={
           index > 0
             ? changes(plan.blocks[index - 1].lineup, block.lineup).on
+            : []
+        }
+        recentlyMoved={
+          index > 0
+            ? positionMoves(plan.blocks[index - 1].lineup, block.lineup)
             : []
         }
         progress={progress}

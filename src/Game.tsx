@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
   formatTime,
   validateLineup,
@@ -11,6 +11,7 @@ import {
   estimatedSeconds,
   nextSubstitutionIndex,
   recentArrivals,
+  recentPositionMoves,
   substitutionLineup,
   substitutions,
 } from './engine';
@@ -115,26 +116,68 @@ function SubstitutionPairs({
 }
 
 let audio: AudioContext | null = null;
-export async function enableSound() {
-  audio ??= new AudioContext();
-  await audio.resume();
+let activeAlarm: OscillatorNode | null = null;
+const soundListeners = new Set<() => void>();
+const soundIsOn = () => audio?.state === 'running';
+const notifySound = () => soundListeners.forEach((listener) => listener());
+function watchSound(listener: () => void) {
+  soundListeners.add(listener);
+  return () => {
+    soundListeners.delete(listener);
+  };
 }
 
-function tone() {
-  if (!audio || audio.state !== 'running')
-    throw new Error(
-      'Sound is unavailable. Tap Enable sound and keep the app open.',
-    );
-  const oscillator = audio.createOscillator();
-  const gain = audio.createGain();
-  oscillator.connect(gain);
-  gain.connect(audio.destination);
-  oscillator.frequency.value = 740;
-  gain.gain.setValueAtTime(0.0001, audio.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.2, audio.currentTime + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.45);
-  oscillator.start();
-  oscillator.stop(audio.currentTime + 0.5);
+export async function enableSound() {
+  if (!audio || audio.state === 'closed') {
+    audio = new AudioContext();
+    audio.addEventListener('statechange', notifySound);
+  }
+  await audio.resume();
+  notifySound();
+}
+
+function stopAlarm() {
+  activeAlarm?.stop();
+  activeAlarm = null;
+  navigator.vibrate?.(0);
+}
+
+async function disableSound() {
+  stopAlarm();
+  await audio?.suspend();
+  notifySound();
+}
+
+function alarm() {
+  stopAlarm();
+  const vibration = navigator.vibrate?.(
+    Array.from({ length: 19 }, (_, i) => (i % 2 === 0 ? 350 : 150)),
+  );
+  if (audio?.state === 'running') {
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    const start = audio.currentTime;
+    oscillator.connect(gain);
+    gain.connect(audio.destination);
+    for (let i = 0; i < 10; i++) {
+      const at = start + i * 0.5;
+      oscillator.frequency.setValueAtTime(i % 2 === 0 ? 740 : 980, at);
+      gain.gain.setValueAtTime(0.0001, at);
+      gain.gain.exponentialRampToValueAtTime(0.16, at + 0.02);
+      gain.gain.setValueAtTime(0.16, at + 0.28);
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.4);
+    }
+    oscillator.onended = () => {
+      oscillator.disconnect();
+      gain.disconnect();
+      if (activeAlarm === oscillator) activeAlarm = null;
+    };
+    oscillator.start(start);
+    oscillator.stop(start + 5);
+    activeAlarm = oscillator;
+  }
+  if (vibration === false)
+    throw new Error('Vibration was blocked by this browser.');
 }
 
 export function useGameAlerts(
@@ -143,6 +186,10 @@ export function useGameAlerts(
   attempt: (action: () => void) => void,
 ) {
   const lastAlert = useRef('');
+  const previousChanges = useRef('');
+  const hasChanges =
+    !!run && (run.notice !== null || run.pendingBlock !== null);
+  const phaseKey = run ? `${run.id}:${run.clock.phase}` : '';
   const shouldAlert =
     !!run &&
     !recovered &&
@@ -154,10 +201,17 @@ export function useGameAlerts(
     ? `${run.id}:${run.pendingBlock}:${run.appliedBlock}:${run.notice?.missed}:${run.clock.phase}`
     : '';
   useEffect(() => {
-    if (!shouldAlert || lastAlert.current === alertKey) return;
+    const acknowledged = previousChanges.current === phaseKey && !hasChanges;
+    previousChanges.current = hasChanges ? phaseKey : '';
+    if (!shouldAlert) {
+      stopAlarm();
+      return;
+    }
+    if (lastAlert.current === alertKey) return;
     lastAlert.current = alertKey;
-    attempt(tone);
-  }, [alertKey, attempt, shouldAlert]);
+    if (acknowledged) stopAlarm();
+    else attempt(alarm);
+  }, [alertKey, attempt, hasChanges, phaseKey, shouldAlert]);
 }
 
 export function ResultForm({
@@ -260,6 +314,7 @@ export function Game({
   ) => void;
   attempt: (action: () => void) => void;
 }) {
+  const soundOn = useSyncExternalStore(watchSound, soundIsOn);
   const [editing, setEditing] = useState<string[] | null>(null);
   const [actualDraft, setActualDraft] = useState<{
     base: string[];
@@ -586,6 +641,7 @@ export function Game({
         players={run.players}
         label="Live lineup"
         recentlyOn={recentArrivals(run)}
+        recentlyMoved={recentPositionMoves(run)}
         nextLineup={
           !recovered && run.clock.phase !== 'fulltime'
             ? nextBlock?.lineup
@@ -702,23 +758,25 @@ export function Game({
         <>
           <div className="row wrap">
             <button
-              className="secondary"
+              className={soundOn ? 'sound-enabled' : 'secondary'}
+              aria-pressed={soundOn}
               onClick={() =>
                 attempt(() => {
-                  void enableSound().catch((error: unknown) =>
-                    attempt(() => {
-                      throw error;
-                    }),
+                  void (soundOn ? disableSound() : enableSound()).catch(
+                    (error: unknown) =>
+                      attempt(() => {
+                        throw error;
+                      }),
                   );
                 })
               }
             >
-              Enable sound
+              Sound alerts {soundOn ? 'on' : 'off'}
             </button>
           </div>
           <p className="hint">
-            Keep the app open to hear alerts. Background alerts are not
-            supported.
+            Sound alerts last five seconds. Vibration is used when supported.
+            Keep the app open; background alerts are not supported.
           </p>
           <details
             className="card"
